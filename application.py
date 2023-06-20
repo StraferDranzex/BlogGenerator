@@ -133,102 +133,50 @@ def get_category_id(category_name, wordpress_domain):
 
 
 def main():
+    # Set page title
     st.title("Blog Post Generator")
 
+    # Download nltk.punkt tokenizer if not already downloaded
     try:
         nltk.data.find("tokenizers/punkt")
     except LookupError:
         nltk.download("punkt")
 
+    # User input section
     st.subheader("Enter Your Input")
+    keywords = st.text_input("Keywords (separated by comma)")
+    topics = st.text_input("Topics (separated by comma)")
+    tone = st.selectbox("Tone", ["Funny", "Serious", "Informative"])
 
-    keywords = st.text_input(
-        "Keywords (separated by comma)", value=st.session_state.get("keywords", "")
-    )
-    st.session_state.keywords = keywords
+    # Create fields for the OpenAI API key, WordPress domain, and login credentials
+    openai_api_key = st.text_input("OpenAI API Key", type="password")
+    wordpress_domain = st.text_input("WordPress Domain")
+    admin_username = st.text_input("WordPress Admin Username")
+    admin_password = st.text_input("WordPress Admin Password", type="password")
 
-    topics = st.text_input(
-        "Topics (separated by comma)", value=st.session_state.get("topics", "")
-    )
-    st.session_state.topics = topics
+    # Retrieve categories
+    categories = get_categories(wordpress_domain)
+    category_names = [category["name"] for category in categories]
 
-    tone_options = ["Funny", "Serious", "Informative"]
-    tone = st.selectbox(
-        "Tone",
-        tone_options,
-        index=tone_options.index(st.session_state.get("tone", ""))
-        if st.session_state.get("tone", "") in tone_options
-        else 0,
-    )
-    st.session_state.tone = tone
-
-    openai_api_key = st.text_input(
-        "OpenAI API Key",
-        type="password",
-        value=st.session_state.get("openai_api_key", ""),
-    )
-    st.session_state.openai_api_key = openai_api_key
-
-    wordpress_domain = st.text_input(
-        "WordPress Domain", value=st.session_state.get("wordpress_domain", "")
-    )
-    st.session_state.wordpress_domain = wordpress_domain
-
-    admin_username = st.text_input(
-        "WordPress Admin Username", value=st.session_state.get("admin_username", "")
-    )
-    st.session_state.admin_username = admin_username
-
-    admin_password = st.text_input(
-        "WordPress Admin Password",
-        type="password",
-        value=st.session_state.get("admin_password", ""),
-    )
-    st.session_state.admin_password = admin_password
-
-    if wordpress_domain:
-        categories = get_categories(wordpress_domain)
-        category_names = [category["name"] for category in categories]
-        if category_names:
-            category_name = st.selectbox(
-                "Category",
-                category_names,
-                index=category_names.index(st.session_state.get("category_name", ""))
-                if st.session_state.get("category_name", "") in category_names
-                else 0,
-            )
-            st.session_state.category_name = category_name
-        else:
-            category_name = ""
+    # Create dropdown for selecting category
+    category_name = st.selectbox("Category", category_names)
 
     if st.button("Generate and Publish"):
-        if (
-            keywords
-            and topics
-            and openai_api_key
-            and wordpress_domain
-            and admin_username
-            and admin_password
-            and category_name
-        ):
-            keywords = [keyword.strip() for keyword in keywords.split(",")]
-            topics = [topic.strip() for topic in topics.split(",")]
+        # Convert keywords and topics to lists
+        keywords = [keyword.strip() for keyword in keywords.split(",")]
+        topics = [topic.strip() for topic in topics.split(",")]
 
-            blog_articles = generate_blog_articles(
-                keywords, topics, tone, openai_api_key
-            )
+        # Generate blog articles
+        blog_articles = generate_blog_articles(keywords, topics, tone, openai_api_key)
 
-            publish_articles_on_wordpress(
-                blog_articles,
-                category_name,
-                wordpress_domain,
-                admin_username,
-                admin_password,
-            )
-        else:
-            st.error(
-                "Please fill out all fields before generating and publishing the articles."
-            )
+        # Publish blog articles on WordPress
+        publish_articles_on_wordpress(
+            blog_articles,
+            category_name,
+            wordpress_domain,
+            admin_username,
+            admin_password,
+        )
 
 
 if __name__ == "__main__":
