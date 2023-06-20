@@ -17,7 +17,6 @@ def generate_blog_articles(keywords, topics, tone, openai_api_key):
 
             prompt = f"Write a {tone} blog article with the title: {title}\n\n"
 
-            # Generate the article using Langchain or GPT model
             openai.api_key = openai_api_key
             response = openai.Completion.create(
                 engine="text-davinci-003",
@@ -29,7 +28,6 @@ def generate_blog_articles(keywords, topics, tone, openai_api_key):
             )
             article = response.choices[0].text.strip()
 
-            # Append the generated article to the list
             blog_articles.append(
                 {
                     "title": title,
@@ -37,7 +35,6 @@ def generate_blog_articles(keywords, topics, tone, openai_api_key):
                 }
             )
 
-            # Introduce a delay between each API call
             time.sleep(5)
 
     return blog_articles
@@ -46,7 +43,6 @@ def generate_blog_articles(keywords, topics, tone, openai_api_key):
 def publish_articles_on_wordpress(
     blog_articles, category_name, wordpress_domain, admin_username, admin_password
 ):
-    # Authenticate with WordPress using admin username and password
     login_url = f"https://{wordpress_domain}/wp-json/jwt-auth/v1/token"
     login_data = {"username": admin_username, "password": admin_password}
     login_response = requests.post(login_url, params=login_data, verify=False)
@@ -60,14 +56,12 @@ def publish_articles_on_wordpress(
 
     token = login_response.json().get("token")
 
-    # Get the category ID based on the selected category name
     category_id = get_category_id(category_name, wordpress_domain)
 
     if category_id is None:
         st.error(f"Failed to find category ID for category: {category_name}")
         return
 
-    # Publish blog articles on WordPress website
     url = f"https://{wordpress_domain}/wp-json/wp/v2/posts"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -82,7 +76,7 @@ def publish_articles_on_wordpress(
             "title": title,
             "content": article,
             "status": "publish",
-            "categories": [category_id],  # Pass category ID as a list
+            "categories": [category_id],
         }
 
         response = requests.post(url, json=data, headers=headers, verify=False)
@@ -95,7 +89,6 @@ def publish_articles_on_wordpress(
 def generate_title(keyword, topic, openai_api_key):
     prompt = f"Generate a title for a blog article about {keyword.strip()} and {topic.strip()}. Keep the title within 50 tokens."
 
-    # Generate the title using the GPT model
     openai.api_key = openai_api_key
     response = openai.Completion.create(
         engine="text-davinci-003",
@@ -133,49 +126,71 @@ def get_category_id(category_name, wordpress_domain):
 
 
 def main():
-    # Set page title
     st.title("Blog Post Generator")
 
-    # Download nltk.punkt tokenizer if not already downloaded
     try:
         nltk.data.find("tokenizers/punkt")
     except LookupError:
         nltk.download("punkt")
 
-    # User input section
     st.subheader("Enter Your Input")
     keywords = st.text_input("Keywords (separated by comma)")
     topics = st.text_input("Topics (separated by comma)")
     tone = st.selectbox("Tone", ["Funny", "Serious", "Informative"])
 
-    # Create fields for the OpenAI API key, WordPress domain, and login credentials
-    openai_api_key = st.text_input("OpenAI API Key", type="password")
-    wordpress_domain = st.text_input("WordPress Domain")
-    admin_username = st.text_input("WordPress Admin Username")
-    admin_password = st.text_input("WordPress Admin Password", type="password")
+    if "openai_api_key" not in st.session_state:
+        st.session_state["openai_api_key"] = st.text_input(
+            "OpenAI API Key", type="password"
+        )
+    else:
+        st.session_state["openai_api_key"] = st.text_input(
+            "OpenAI API Key", value=st.session_state["openai_api_key"], type="password"
+        )
 
-    # Retrieve categories
-    categories = get_categories(wordpress_domain)
+    if "wordpress_domain" not in st.session_state:
+        st.session_state["wordpress_domain"] = st.text_input("WordPress Domain")
+    else:
+        st.session_state["wordpress_domain"] = st.text_input(
+            "WordPress Domain", value=st.session_state["wordpress_domain"]
+        )
+
+    if "admin_username" not in st.session_state:
+        st.session_state["admin_username"] = st.text_input("WordPress Admin Username")
+    else:
+        st.session_state["admin_username"] = st.text_input(
+            "WordPress Admin Username", value=st.session_state["admin_username"]
+        )
+
+    if "admin_password" not in st.session_state:
+        st.session_state["admin_password"] = st.text_input(
+            "WordPress Admin Password", type="password"
+        )
+    else:
+        st.session_state["admin_password"] = st.text_input(
+            "WordPress Admin Password",
+            value=st.session_state["admin_password"],
+            type="password",
+        )
+
+    categories = get_categories(st.session_state["wordpress_domain"])
     category_names = [category["name"] for category in categories]
 
-    # Create dropdown for selecting category
     category_name = st.selectbox("Category", category_names)
 
     if st.button("Generate and Publish"):
-        # Convert keywords and topics to lists
         keywords = [keyword.strip() for keyword in keywords.split(",")]
         topics = [topic.strip() for topic in topics.split(",")]
 
-        # Generate blog articles
-        blog_articles = generate_blog_articles(keywords, topics, tone, openai_api_key)
+        blog_articles = generate_blog_articles(
+            keywords, topics, tone, st.session_state["openai_api_key"]
+        )
 
-        # Publish blog articles on WordPress
         publish_articles_on_wordpress(
             blog_articles,
             category_name,
-            wordpress_domain,
-            admin_username,
-            admin_password,
+            st.session_state["wordpress_domain"],
+            st.session_state["admin_username"],
+            st.session_state["admin_password"],
         )
 
 
