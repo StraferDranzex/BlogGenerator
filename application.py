@@ -55,7 +55,6 @@ def publish_articles_on_wordpress(
         st.success("Login was successful, about to post the articles!")
 
     token = login_response.json().get("token")
-
     category_id = get_category_id(category_name, wordpress_domain)
 
     if category_id is None:
@@ -134,63 +133,80 @@ def main():
         nltk.download("punkt")
 
     st.subheader("Enter Your Input")
-    keywords = st.text_input("Keywords (separated by comma)")
-    topics = st.text_input("Topics (separated by comma)")
-    tone = st.selectbox("Tone", ["Funny", "Serious", "Informative"])
 
-    if "openai_api_key" not in st.session_state:
-        st.session_state["openai_api_key"] = st.text_input(
-            "OpenAI API Key", type="password"
-        )
-    else:
-        st.session_state["openai_api_key"] = st.text_input(
-            "OpenAI API Key", value=st.session_state["openai_api_key"], type="password"
-        )
+    if "inputs" not in st.session_state:
+        st.session_state.inputs = {
+            "keywords": "",
+            "topics": "",
+            "tone": "",
+            "openai_api_key": "",
+            "wordpress_domain": "",
+            "admin_username": "",
+            "admin_password": "",
+            "category": "",
+        }
 
-    if "wordpress_domain" not in st.session_state:
-        st.session_state["wordpress_domain"] = st.text_input("WordPress Domain")
-    else:
-        st.session_state["wordpress_domain"] = st.text_input(
-            "WordPress Domain", value=st.session_state["wordpress_domain"]
-        )
+    st.session_state.inputs["keywords"] = st.text_input(
+        "Keywords (separated by comma)", value=st.session_state.inputs["keywords"]
+    )
+    st.session_state.inputs["topics"] = st.text_input(
+        "Topics (separated by comma)", value=st.session_state.inputs["topics"]
+    )
+    st.session_state.inputs["tone"] = st.selectbox(
+        "Tone",
+        ["Funny", "Serious", "Informative"],
+        index=["Funny", "Serious", "Informative"].index(
+            st.session_state.inputs["tone"]
+        ),
+    )
+    st.session_state.inputs["openai_api_key"] = st.text_input(
+        "OpenAI API Key",
+        value=st.session_state.inputs["openai_api_key"],
+        type="password",
+    )
+    st.session_state.inputs["wordpress_domain"] = st.text_input(
+        "WordPress Domain", value=st.session_state.inputs["wordpress_domain"]
+    )
+    st.session_state.inputs["admin_username"] = st.text_input(
+        "WordPress Admin Username", value=st.session_state.inputs["admin_username"]
+    )
+    st.session_state.inputs["admin_password"] = st.text_input(
+        "WordPress Admin Password",
+        value=st.session_state.inputs["admin_password"],
+        type="password",
+    )
 
-    if "admin_username" not in st.session_state:
-        st.session_state["admin_username"] = st.text_input("WordPress Admin Username")
-    else:
-        st.session_state["admin_username"] = st.text_input(
-            "WordPress Admin Username", value=st.session_state["admin_username"]
-        )
-
-    if "admin_password" not in st.session_state:
-        st.session_state["admin_password"] = st.text_input(
-            "WordPress Admin Password", type="password"
-        )
-    else:
-        st.session_state["admin_password"] = st.text_input(
-            "WordPress Admin Password",
-            value=st.session_state["admin_password"],
-            type="password",
-        )
-
-    categories = get_categories(st.session_state["wordpress_domain"])
+    categories = get_categories(st.session_state.inputs["wordpress_domain"])
     category_names = [category["name"] for category in categories]
 
-    category_name = st.selectbox("Category", category_names)
+    st.session_state.inputs["category"] = st.selectbox(
+        "Category",
+        category_names,
+        index=category_names.index(st.session_state.inputs["category"]),
+    )
 
     if st.button("Generate and Publish"):
-        keywords = [keyword.strip() for keyword in keywords.split(",")]
-        topics = [topic.strip() for topic in topics.split(",")]
+        keywords = [
+            keyword.strip()
+            for keyword in st.session_state.inputs["keywords"].split(",")
+        ]
+        topics = [
+            topic.strip() for keyword in st.session_state.inputs["topics"].split(",")
+        ]
+        tone = st.session_state.inputs["tone"]
+        openai_api_key = st.session_state.inputs["openai_api_key"]
+        wordpress_domain = st.session_state.inputs["wordpress_domain"]
+        admin_username = st.session_state.inputs["admin_username"]
+        admin_password = st.session_state.inputs["admin_password"]
+        category_name = st.session_state.inputs["category"]
 
-        blog_articles = generate_blog_articles(
-            keywords, topics, tone, st.session_state["openai_api_key"]
-        )
-
+        blog_articles = generate_blog_articles(keywords, topics, tone, openai_api_key)
         publish_articles_on_wordpress(
             blog_articles,
             category_name,
-            st.session_state["wordpress_domain"],
-            st.session_state["admin_username"],
-            st.session_state["admin_password"],
+            wordpress_domain,
+            admin_username,
+            admin_password,
         )
 
 
