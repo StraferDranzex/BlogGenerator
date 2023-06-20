@@ -137,7 +137,9 @@ def main():
     st.title("Blog Post Generator")
 
     # Download nltk.punkt tokenizer if not already downloaded
-    if not nltk.data.find("tokenizers/punkt"):
+    try:
+        nltk.data.find("tokenizers/punkt")
+    except LookupError:
         nltk.download("punkt")
 
     # User input section
