@@ -7,6 +7,8 @@ import openai
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+POSTS_PER_BATCH = 30  # Number of posts to publish at a time
+
 
 def generate_blog_articles(keywords, topics, tone, openai_api_key):
     blog_articles = []
@@ -67,13 +69,20 @@ def publish_articles_on_wordpress(
         st.error(f"Failed to find category ID for category: {category_name}")
         return
 
-    # Publish blog articles on WordPress website
+    # Publishing URL
     url = f"https://{wordpress_domain}/wp-json/wp/v2/posts"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
+    # Split the blog_articles into chunks and publish
+    for i in range(0, len(blog_articles), POSTS_PER_BATCH):
+        publish_batch(blog_articles[i : i + POSTS_PER_BATCH], url, headers, category_id)
+
+
+def publish_batch(blog_articles, url, headers, category_id):
+    # Publish blog articles on WordPress website
     for i, article_info in enumerate(blog_articles, start=1):
         title = article_info["title"]
         article = article_info["article"]
@@ -90,6 +99,8 @@ def publish_articles_on_wordpress(
             st.success(f"Article {i} published successfully!")
         else:
             st.error(f"Failed to publish Article {i}. Error: {response.text}")
+
+        time.sleep(2)  # Wait between each article to avoid overloading the server
 
 
 def generate_title(keyword, topic, openai_api_key):
@@ -169,7 +180,7 @@ def main():
         # Generate blog articles
         blog_articles = generate_blog_articles(keywords, topics, tone, openai_api_key)
 
-        # Publish blog articles on WordPress
+        # Publish blog articles on WordPress in batches
         publish_articles_on_wordpress(
             blog_articles,
             category_name,
